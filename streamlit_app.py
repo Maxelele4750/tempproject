@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from nicegui import events, ui
 from io import StringIO
 import io
 requirements.txt
