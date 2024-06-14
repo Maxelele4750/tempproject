@@ -1,6 +1,6 @@
 import streamlit as st 
 import pandas as pd
-import seaborn as sns
+#import seaborn as sns
 import numpy as np
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
@@ -31,11 +31,11 @@ def csv_file_handler(e: events.UploadEventArguments):
         df = df.pivot(columns='Benämningar', values='Measurement')
         df.interpolate(method='time', limit_direction='both', inplace=True)
         plt.figure()
-        ax1 = sns.lineplot(data=df, dashes=False) #look at data
+        #ax1 = sns.lineplot(data=df, dashes=False) #look at data
         #apply savgol filter to to each column to smoothen out the data
         df = df.apply(lambda x: savgol_filter(x, 100, 3), axis=0)
         plt.figure()
-        ax2 = sns.lineplot(data=df, dashes=False)
+        #ax2 = sns.lineplot(data=df, dashes=False)
         #get the hourly measurement for each day
         h = df.groupby([df.index.day, df.index.hour]).first()
         h.reset_index(inplace=True, drop=True)
@@ -43,11 +43,11 @@ def csv_file_handler(e: events.UploadEventArguments):
         h = h.apply(lambda x: np.gradient(x), axis=0)
         h *= 100
         plt.figure()
-        ax_h = sns.lineplot(data=h, dashes=False)
-        ax_h.set_xticks(np.linspace(0, len(h), 7))
-        ax_h.set_xticklabels(ax2.get_xticklabels())
-        ax_h.set_ylabel('Temperature change [%/h]')
-        ax_h.set_xlabel('Time [M-D H]')
+        # ax_h = sns.lineplot(data=h, dashes=False)
+        # ax_h.set_xticks(np.linspace(0, len(h), 7))
+        # ax_h.set_xticklabels(ax2.get_xticklabels())
+        # ax_h.set_ylabel('Temperature change [%/h]')
+        # ax_h.set_xlabel('Time [M-D H]')
         plt.show()
     else:
         with StringIO(e.content.read().decode("utf-8")) as f:
@@ -63,11 +63,11 @@ def csv_file_handler(e: events.UploadEventArguments):
             df = df.pivot(columns='Benämningar', values='Measurement')
             df.interpolate(method='time', limit_direction='both', inplace=True)
             plt.figure()
-            ax1 = sns.lineplot(data=df, dashes=False) #look at data
+            # ax1 = sns.lineplot(data=df, dashes=False) #look at data
             #apply savgol filter to to each column to smoothen out the data
             df = df.apply(lambda x: savgol_filter(x, 100, 3), axis=0)
             plt.figure()
-            ax2 = sns.lineplot(data=df, dashes=False)
+            #ax2 = sns.lineplot(data=df, dashes=False)
             #get the hourly measurement for each day
             h = df.groupby([df.index.day, df.index.hour]).first()
             h.reset_index(inplace=True, drop=True)
@@ -75,11 +75,11 @@ def csv_file_handler(e: events.UploadEventArguments):
             h = h.apply(lambda x: np.gradient(x), axis=0)
             h *= 100
             plt.figure()
-            ax_h = sns.lineplot(data=h, dashes=False)
-            ax_h.set_xticks(np.linspace(0, len(h), 7))
-            ax_h.set_xticklabels(ax2.get_xticklabels())
-            ax_h.set_ylabel('Temperature change [%/h]')
-            ax_h.set_xlabel('Time [M-D H]')
+            # ax_h = sns.lineplot(data=h, dashes=False)
+            # ax_h.set_xticks(np.linspace(0, len(h), 7))
+            # ax_h.set_xticklabels(ax2.get_xticklabels())
+            # ax_h.set_ylabel('Temperature change [%/h]')
+            # ax_h.set_xlabel('Time [M-D H]')
             plt.show()
 
 uploaded_files = st.file_uploader("Choose CSV files", type="csv")
