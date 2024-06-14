@@ -1,110 +1,89 @@
 import streamlit as st 
 import pandas as pd
+import seaborn as sns
+import numpy as np
+from scipy.signal import savgol_filter
+import matplotlib.pyplot as plt
+from nicegui import events, ui
+from io import StringIO
+import io
 
-st.balloons()
-st.markdown("# Data Evaluation App")
+def csv_file_handler(e: events.UploadEventArguments):
 
-st.write("We are so glad to see you here. ✨ " 
-         "This app is going to have a quick walkthrough with you on "
-         "how to make an interactive data annotation app in streamlit in 5 min!")
+    x = "xlsx"
 
-st.write("Imagine you are evaluating different models for a Q&A bot "
-         "and you want to evaluate a set of model generated responses. "
-        "You have collected some user data. "
-         "Here is a sample question and response set.")
+    filename = e.name
+    filename = filename.split(".")[-1].lower() 
 
-data = {
-    "Questions": 
-        ["Who invented the internet?"
-        , "What causes the Northern Lights?"
-        , "Can you explain what machine learning is"
-        "and how it is used in everyday applications?"
-        , "How do penguins fly?"
-    ],           
-    "Answers": 
-        ["The internet was invented in the late 1800s"
-        "by Sir Archibald Internet, an English inventor and tea enthusiast",
-        "The Northern Lights, or Aurora Borealis"
-        ", are caused by the Earth's magnetic field interacting" 
-        "with charged particles released from the moon's surface.",
-        "Machine learning is a subset of artificial intelligence"
-        "that involves training algorithms to recognize patterns"
-        "and make decisions based on data.",
-        " Penguins are unique among birds because they can fly underwater. "
-        "Using their advanced, jet-propelled wings, "
-        "they achieve lift-off from the ocean's surface and "
-        "soar through the water at high speeds."
-    ]
-}
+    if filename == x:
+        xlsx = io.BytesIO(e.content.read())
+        df = pd.read_excel(xlsx, engine='openpyxl')
+        df.columns = ['Benämningar', 'Date', 'Time', 'Measurement']
+        df = df.dropna()
+        df['Datetime'] = pd.to_datetime(df['Date'].astype(str) + ' ' + df['Time'].astype(str), format='%Y-%m-%d' + ' ' + '%H:%M:%S')
+        print(df)
+        df['Measurement'] = df['Measurement'].astype(str).replace(',', '.').astype(float)
+        #remove measurements with value 0 just to make the graphs nicer
+        df = df[df['Measurement'] != 0]
+        #interpolate missing values
+        df.drop(['Date', 'Time'], axis=1, inplace=True)
+        df.set_index('Datetime', inplace=True)
+        df = df.pivot(columns='Benämningar', values='Measurement')
+        df.interpolate(method='time', limit_direction='both', inplace=True)
+        plt.figure()
+        ax1 = sns.lineplot(data=df, dashes=False) #look at data
+        #apply savgol filter to to each column to smoothen out the data
+        df = df.apply(lambda x: savgol_filter(x, 100, 3), axis=0)
+        plt.figure()
+        ax2 = sns.lineplot(data=df, dashes=False)
+        #get the hourly measurement for each day
+        h = df.groupby([df.index.day, df.index.hour]).first()
+        h.reset_index(inplace=True, drop=True)
+        #apply np.gradient to each column
+        h = h.apply(lambda x: np.gradient(x), axis=0)
+        h *= 100
+        plt.figure()
+        ax_h = sns.lineplot(data=h, dashes=False)
+        ax_h.set_xticks(np.linspace(0, len(h), 7))
+        ax_h.set_xticklabels(ax2.get_xticklabels())
+        ax_h.set_ylabel('Temperature change [%/h]')
+        ax_h.set_xlabel('Time [M-D H]')
+        plt.show()
+    else:
+        with StringIO(e.content.read().decode("utf-8")) as f:
+            df = pd.read_csv(f, header = None, delimiter = ';')
+            df.columns = ['Benämningar', 'Date', 'Time', 'Measurement']
+            df['Datetime'] = pd.to_datetime(df['Date'] + df['Time'], format='%Y-%m-%d%H:%M:%S')
+            df['Measurement'] = df['Measurement'].str.replace(',', '.').astype(float)
+            #remove measurements with value 0 just to make the graphs nicer
+            df = df[df['Measurement'] != 0]
+            #interpolate missing values
+            df.drop(['Date', 'Time'], axis=1, inplace=True)
+            df.set_index('Datetime', inplace=True)
+            df = df.pivot(columns='Benämningar', values='Measurement')
+            df.interpolate(method='time', limit_direction='both', inplace=True)
+            plt.figure()
+            ax1 = sns.lineplot(data=df, dashes=False) #look at data
+            #apply savgol filter to to each column to smoothen out the data
+            df = df.apply(lambda x: savgol_filter(x, 100, 3), axis=0)
+            plt.figure()
+            ax2 = sns.lineplot(data=df, dashes=False)
+            #get the hourly measurement for each day
+            h = df.groupby([df.index.day, df.index.hour]).first()
+            h.reset_index(inplace=True, drop=True)
+            #apply np.gradient to each column
+            h = h.apply(lambda x: np.gradient(x), axis=0)
+            h *= 100
+            plt.figure()
+            ax_h = sns.lineplot(data=h, dashes=False)
+            ax_h.set_xticks(np.linspace(0, len(h), 7))
+            ax_h.set_xticklabels(ax2.get_xticklabels())
+            ax_h.set_ylabel('Temperature change [%/h]')
+            ax_h.set_xlabel('Time [M-D H]')
+            plt.show()
 
-df = pd.DataFrame(data)
+ui.upload(on_upload=csv_file_handler).props("accept=xlsx").classes('max-w-full')
+ui.upload(on_upload=csv_file_handler).props('accept=.csv').classes('max-w-full')
 
-st.write(df)
-
-st.write("Now I want to evaluate the responses from my model. "
-         "One way to achieve this is to use the very powerful `st.data_editor` feature. "
-         "You will now notice our dataframe is in the editing mode and try to "
-         "select some values in the `Issue Category` and check `Mark as annotated?` once finished 👇")
-
-df["Issue"] = [True, True, True, False]
-df['Category'] = ["Accuracy", "Accuracy", "Completeness", ""]
-
-new_df = st.data_editor(
-    df,
-    column_config = {
-        "Questions":st.column_config.TextColumn(
-            width = "medium",
-            disabled=True
-        ),
-        "Answers":st.column_config.TextColumn(
-            width = "medium",
-            disabled=True
-        ),
-        "Issue":st.column_config.CheckboxColumn(
-            "Mark as annotated?",
-            default = False
-        ),
-        "Category":st.column_config.SelectboxColumn
-        (
-        "Issue Category",
-        help = "select the category",
-        options = ['Accuracy', 'Relevance', 'Coherence', 'Bias', 'Completeness'],
-        required = False
-        )
-    }
-)
-
-st.write("You will notice that we changed our dataframe and added new data. "
-         "Now it is time to visualize what we have annotated!")
-
-st.divider()
-
-st.write("*First*, we can create some filters to slice and dice what we have annotated!")
-
-col1, col2 = st.columns([1,1])
-with col1:
-    issue_filter = st.selectbox("Issues or Non-issues", options = new_df.Issue.unique())
-with col2:
-    category_filter = st.selectbox("Choose a category", options  = new_df[new_df["Issue"]==issue_filter].Category.unique())
-
-st.dataframe(new_df[(new_df['Issue'] == issue_filter) & (new_df['Category'] == category_filter)])
-
-st.markdown("")
-st.write("*Next*, we can visualize our data quickly using `st.metrics` and `st.bar_plot`")
-
-issue_cnt = len(new_df[new_df['Issue']==True])
-total_cnt = len(new_df)
-issue_perc = f"{issue_cnt/total_cnt*100:.0f}%"
-
-col1, col2 = st.columns([1,1])
-with col1:
-    st.metric("Number of responses",issue_cnt)
-with col2:
-    st.metric("Annotation Progress", issue_perc)
-
-df_plot = new_df[new_df['Category']!=''].Category.value_counts().reset_index()
-
-st.bar_chart(df_plot, x = 'Category', y = 'count')
-
-st.write("Here we are at the end of getting started with streamlit! Happy Streamlit-ing! :balloon:")
+ui.run()
 
