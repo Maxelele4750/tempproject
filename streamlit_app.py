@@ -1,11 +1,11 @@
 import pandas as pd
-import seaborn as sns
 import numpy as np
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from nicegui import events, ui
 from io import StringIO
 import io
+requirements.txt
 
 def csv_file_handler(e: events.UploadEventArguments):
 
