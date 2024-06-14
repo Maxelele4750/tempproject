@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from nicegui import events, ui
 from io import StringIO
