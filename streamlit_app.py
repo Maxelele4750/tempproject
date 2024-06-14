@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 import io
-requirements.txt
 
 def csv_file_handler(e: events.UploadEventArguments):
 
