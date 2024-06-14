@@ -82,8 +82,4 @@ def csv_file_handler(e: events.UploadEventArguments):
             ax_h.set_xlabel('Time [M-D H]')
             plt.show()
 
-ui.upload(on_upload=csv_file_handler).props("accept=xlsx").classes('max-w-full')
-ui.upload(on_upload=csv_file_handler).props('accept=.csv').classes('max-w-full')
-
-ui.run()
-
+uploaded_files = st.file_uploader("Choose CSV files", type="csv")
